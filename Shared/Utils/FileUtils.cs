@@ -105,14 +105,12 @@ public static class FileUtils {
     }
 
     /// <summary>
-    /// 原子写入文件。成功时目标文件完整切换为新内容，失败时已有目标文件保持不变。
-    /// 不提供并发写入合并保证。
+    /// 原子写入文件。写入失败时目标文件保持不变。
     /// </summary>
     public static void WriteAtomic(string filePath, string text, Encoding? encoding = null) =>
         FileUtils.WriteAtomic(filePath, (encoding ?? new UTF8Encoding()).GetBytes(text));
     /// <summary>
-    /// 原子写入文件。成功时目标文件完整切换为新内容，失败时已有目标文件保持不变。
-    /// 不提供并发写入合并保证。
+    /// 原子写入文件。写入失败时目标文件保持不变。
     /// </summary>
     public static void WriteAtomic(string filePath, byte[] content) {
         string tempPath = $"{filePath}.{Guid.NewGuid():N}.tmp";
@@ -462,14 +460,13 @@ public static class FileUtils {
         => File.Exists(PathUtils.ForApi(filePath));
 
     /// <summary>
-    /// 检查文件是否未被其他进程占用
-    /// <para>被占用或无权读取时返回 <see langword="false"/>。</para>
+    /// 检查文件是否存在，且当前程序有独占的读写权限，未被其他进程占用。
     /// </summary>
     public static bool IsAvailable(string filePath) {
-        if (!Exists(filePath)) return true;
+        if (!Exists(filePath)) return false;
         try {
             Retrier.Attempt(maxAttempts: 3, delay: _ => TimeSpan.FromMilliseconds(200), isRetryAllowed: ex => ex is IOException, action: _ => {
-                using var stream = new FileStream(PathUtils.ForApi(filePath), FileMode.Open, FileAccess.Read, FileShare.None);
+                using var unused = new FileStream(PathUtils.ForApi(filePath), FileMode.Open, FileAccess.ReadWrite, FileShare.None);
             });
             return true;
         } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) {

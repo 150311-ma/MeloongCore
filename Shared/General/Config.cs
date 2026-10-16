@@ -231,7 +231,6 @@ public static class ConfigUtils {
         try {
             return FileUtils.Exists(filePath) ? JObject.Parse(FileUtils.ReadAsString(filePath)) : [];
         } catch {
-            // JSON 异常可能包含凭据内容，不保留原始异常，也不回退空配置。
             throw new InvalidDataException($"读取密钥文件失败（{filePath}），请检查文件内容与加密格式。");
         }
     });
